@@ -1,5 +1,6 @@
 {
   "cloud": {
-    "runtime": "edge"
+    "runtime": "edge",
+    "entrypoint": "index.js"
   }
 }
