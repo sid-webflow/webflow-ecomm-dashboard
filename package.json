@@ -1,0 +1,8 @@
+{
+  "name": "webflow-cloud-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
