@@ -1,50 +1,62 @@
-import http from "http";
-import { dashboard } from "./dashboard.js";
-
-const server = http.createServer((req, res) => {
+export default function handler(request) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const cookie = request.headers.get("cookie") || "";
+  const isAuth = cookie.includes("auth=true");
 
   // LOGIN PAGE
-  if (req.url === "/login") {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(`
+  if (path === "/login" && request.method === "GET") {
+    return new Response(`
       <h2>Login</h2>
       <form method="POST" action="/login">
-        <input placeholder="username" /><br><br>
-        <input type="password" placeholder="password" /><br><br>
+        <input name="user" placeholder="username" /><br><br>
+        <input name="pass" type="password" placeholder="password" /><br><br>
         <button>Login</button>
       </form>
-    `);
-    return;
+    `, {
+      headers: { "Content-Type": "text/html" }
+    });
   }
 
   // LOGIN ACTION
-  if (req.url === "/login" && req.method === "POST") {
-    res.writeHead(302, {
-      "Set-Cookie": "auth=true; Path=/",
-      Location: "/dashboard"
+  if (path === "/login" && request.method === "POST") {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        "Set-Cookie": "auth=true; Path=/",
+        "Location": "/dashboard"
+      }
     });
-    res.end();
-    return;
   }
 
   // LOGOUT
-  if (req.url === "/logout") {
-    res.writeHead(302, {
-      "Set-Cookie": "auth=false; Path=/; Max-Age=0",
-      Location: "/login"
+  if (path === "/logout") {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        "Set-Cookie": "auth=; Path=/; Max-Age=0",
+        "Location": "/login"
+      }
     });
-    res.end();
-    return;
   }
 
   // DASHBOARD (Protected)
-  if (req.url === "/dashboard") {
-    dashboard(req, res);
-    return;
+  if (path === "/dashboard") {
+    if (!isAuth) {
+      return new Response(null, {
+        status: 302,
+        headers: { "Location": "/login" }
+      });
+    }
+
+    return new Response(`
+      <h1>Ecommerce Dashboard</h1>
+      <p>Welcome! Login successful ✅</p>
+      <a href="/logout">Logout</a>
+    `, {
+      headers: { "Content-Type": "text/html" }
+    });
   }
 
-  res.writeHead(404);
-  res.end("Not found");
-});
-
-server.listen(3000);
+  return new Response("Page not found", { status: 404 });
+}
