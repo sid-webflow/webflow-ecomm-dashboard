@@ -1,62 +1,55 @@
-export default function handler(request) {
-  const url = new URL(request.url);
-  const path = url.pathname;
-  const cookie = request.headers.get("cookie") || "";
-  const isAuth = cookie.includes("auth=true");
+import http from "http";
+import { dashboard } from "./dashboard.js";
+import { parse } from "url";
+
+const server = http.createServer((req, res) => {
+  const parsedUrl = parse(req.url, true);
+
+  // IMPORTANT FIX 👇
+  const path = parsedUrl.pathname.replace("/app", "") || "/";
 
   // LOGIN PAGE
-  if (path === "/login" && request.method === "GET") {
-    return new Response(`
+  if (path === "/login" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "text/html" });
+    res.end(`
       <h2>Login</h2>
-      <form method="POST" action="/login">
-        <input name="user" placeholder="username" /><br><br>
-        <input name="pass" type="password" placeholder="password" /><br><br>
+      <form method="POST" action="/app/login">
+        <input placeholder="username" /><br><br>
+        <input type="password" placeholder="password" /><br><br>
         <button>Login</button>
       </form>
-    `, {
-      headers: { "Content-Type": "text/html" }
-    });
+    `);
+    return;
   }
 
   // LOGIN ACTION
-  if (path === "/login" && request.method === "POST") {
-    return new Response(null, {
-      status: 302,
-      headers: {
-        "Set-Cookie": "auth=true; Path=/",
-        "Location": "/dashboard"
-      }
+  if (path === "/login" && req.method === "POST") {
+    res.writeHead(302, {
+      "Set-Cookie": "auth=true; Path=/",
+      Location: "/app/dashboard"
     });
+    res.end();
+    return;
   }
 
   // LOGOUT
   if (path === "/logout") {
-    return new Response(null, {
-      status: 302,
-      headers: {
-        "Set-Cookie": "auth=; Path=/; Max-Age=0",
-        "Location": "/login"
-      }
+    res.writeHead(302, {
+      "Set-Cookie": "auth=false; Path=/; Max-Age=0",
+      Location: "/app/login"
     });
+    res.end();
+    return;
   }
 
-  // DASHBOARD (Protected)
+  // DASHBOARD
   if (path === "/dashboard") {
-    if (!isAuth) {
-      return new Response(null, {
-        status: 302,
-        headers: { "Location": "/login" }
-      });
-    }
-
-    return new Response(`
-      <h1>Ecommerce Dashboard</h1>
-      <p>Welcome! Login successful ✅</p>
-      <a href="/logout">Logout</a>
-    `, {
-      headers: { "Content-Type": "text/html" }
-    });
+    dashboard(req, res);
+    return;
   }
 
-  return new Response("Page not found", { status: 404 });
-}
+  res.writeHead(404);
+  res.end("Not found");
+});
+
+export default server;
